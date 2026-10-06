@@ -32,6 +32,14 @@ export PLAYWRIGHT_BROWSERS_PATH="$PASTA/.browsers"
 "$PASTA/.venv/bin/playwright" install --with-deps chromium >/dev/null
 
 [ -f "$PASTA/.env" ] || cp "$PASTA/.env.example" "$PASTA/.env"
+# Valores passados no comando de instalação vão diretamente para o .env.
+for VAR in TELEGRAM_TOKEN_FS TELEGRAM_CHAT_FS TELEGRAM_TOKEN_LR TELEGRAM_CHAT_LR \
+           ATIVAR_FOOTBALL_STUDIO ATIVAR_LIGHTNING_ROULETTE FONTE TIPMINER_EMAIL TIPMINER_SENHA; do
+  if [ -n "${!VAR:-}" ]; then
+    VALOR=$(printf '%s' "${!VAR}" | sed 's/[&|\\]/\\&/g')
+    sed -i "s|^$VAR=.*|$VAR=$VALOR|" "$PASTA/.env"
+  fi
+done
 chmod 600 "$PASTA/.env"
 chown -R "$UTILIZADOR:$UTILIZADOR" "$PASTA"
 
@@ -55,6 +63,10 @@ WantedBy=multi-user.target
 SERVICO
 systemctl daemon-reload
 systemctl enable -q robos-casino
+if grep -q '^TELEGRAM_TOKEN_FS=.\+' "$PASTA/.env" || grep -q '^TELEGRAM_TOKEN_LR=.\+' "$PASTA/.env"; then
+  systemctl restart robos-casino
+  echo "==> Robô arrancado"
+fi
 
 cat <<FIM
 
