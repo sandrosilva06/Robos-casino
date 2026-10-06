@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,6 +31,42 @@ JS_LER_ITENS = """
   el.querySelectorAll('[class]').forEach(c => partes.push(c.className));
   return partes.filter(Boolean).join(' ').replace(/\\s+/g, ' ').trim();
 })
+"""
+
+
+JS_CAMPOS = """
+() => [
+  ...Array.from(document.querySelectorAll('input')).map(i =>
+    `input  type=${i.type} name=${i.name} id=${i.id} placeholder=${i.placeholder}`),
+  ...Array.from(document.querySelectorAll('button, [type=submit], a[href*=login], a[href*=entrar]')).slice(0, 12).map(b =>
+    `${b.tagName.toLowerCase()} type=${b.type || ''} id=${b.id} texto=${(b.innerText || '').trim().slice(0, 30)} href=${b.getAttribute('href') || ''}`),
+]
+"""
+
+# Procura grupos de elementos repetidos com texto curto (números, letras, ícones):
+# é assim que costumam aparecer os históricos de resultados.
+JS_CANDIDATOS = """
+() => {
+  const grupos = {};
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.children.length > 4) continue;
+    const txt = (el.innerText || '').trim();
+    if (txt.length > 10) continue;
+    const tag = el.tagName.toLowerCase();
+    const classes = Array.from(el.classList).map(c => '.' + CSS.escape(c));
+    const chaves = classes.map(c => tag + c);
+    if (classes.length > 1) chaves.push(tag + classes.join(''));
+    for (const k of chaves) (grupos[k] = grupos[k] || []).push(el);
+  }
+  const amostra = e => {
+    const img = e.querySelector('img');
+    return [(e.innerText || '').trim(), e.getAttribute('title'), img && (img.alt || img.src.split('/').pop())]
+      .filter(Boolean).join('/') || '(vazio)';
+  };
+  return Object.entries(grupos).filter(([, els]) => els.length >= 8)
+    .sort((a, b) => b[1].length - a[1].length).slice(0, 20)
+    .map(([sel, els]) => ({sel, n: els.length, ex: els.slice(0, 6).map(amostra)}));
+}
 """
 
 
@@ -64,7 +101,8 @@ class FonteTipminer:
             if self._ctx:
                 return self._ctx
             self._pw = await async_playwright().start()
-            self._browser = await self._pw.chromium.launch(headless=self.cfg.headless)
+            self._browser = await self._pw.chromium.launch(
+                headless=self.cfg.headless, executable_path=os.getenv("CHROMIUM_PATH") or None)
             sessao = self.cfg.ficheiro_sessao
             self._ctx = await self._browser.new_context(
                 storage_state=str(sessao) if sessao.exists() else None,
@@ -78,7 +116,9 @@ class FonteTipminer:
         pagina = await ctx.new_page()
         await pagina.goto(self.cfg.url_login, wait_until="domcontentloaded")
         if await pagina.locator(self.cfg.seletor_email).count() == 0:
-            log.info("Tipminer: sessão já iniciada")
+            log.warning("Tipminer: campo de email não encontrado em %s (%s); "
+                        "ou já tens sessão iniciada ou o URL/seletor de login está errado",
+                        pagina.url, await pagina.title())
             await pagina.close()
             return
         await pagina.fill(self.cfg.seletor_email, self.cfg.email)
@@ -143,16 +183,42 @@ class FonteTipminer:
 
     async def diagnostico(self, jogos: list[Jogo], pasta: Path = Path("diagnostico")) -> None:
         pasta.mkdir(exist_ok=True)
-        await self.entrar()
+        ctx = await self._contexto()
+
+        print("\n== LOGIN")
+        p = await ctx.new_page()
+        r = await p.goto(self.cfg.url_login, wait_until="domcontentloaded")
+        await p.wait_for_timeout(4000)
+        print(f"  URL pedido : {self.cfg.url_login}")
+        print(f"  URL final  : {p.url}  (HTTP {r.status if r else '?'})")
+        print(f"  Título     : {await p.title()}")
+        for campo in await p.evaluate(JS_CAMPOS):
+            print(f"  {campo}")
+        await p.screenshot(path=str(pasta / "login.png"), full_page=True)
+        await p.close()
+
+        try:
+            await self.entrar()
+        except Exception as e:
+            print(f"  Falha no login: {e}")
+
         for jogo in jogos:
-            p = await self._pagina(jogo)
-            await p.wait_for_timeout(5000)
+            p = await ctx.new_page()
+            r = await p.goto(self.cfg.urls[jogo.chave], wait_until="domcontentloaded")
+            self._paginas[jogo.chave] = p
+            await p.wait_for_timeout(8000)
             await p.screenshot(path=str(pasta / f"{jogo.chave}.png"), full_page=True)
             (pasta / f"{jogo.chave}.html").write_text(await p.content())
+            print(f"\n== {jogo.nome.upper()}")
+            print(f"  URL final : {p.url}  (HTTP {r.status if r else '?'})")
+            print(f"  Título    : {await p.title()}")
+            texto = (await p.evaluate("document.body.innerText"))[:250].replace("\n", " | ")
+            print(f"  Texto     : {texto}")
             itens = await p.evaluate(JS_LER_ITENS, self.cfg.seletor_resultado)
-            print(f"\n== {jogo.nome}: {len(itens)} itens com o seletor '{self.cfg.seletor_resultado}'")
-            for i in itens[:15]:
-                print(f"  {jogo.ler(i)!s:<14} <- {i[:100]}")
+            print(f"  Seletor atual '{self.cfg.seletor_resultado}': {len(itens)} itens")
+            print("  Candidatos (seletor / quantidade / exemplos):")
+            for c in await p.evaluate(JS_CANDIDATOS):
+                print(f"    {c['sel'][:60]:<60} {c['n']:>4}  {' · '.join(c['ex'])[:70]}")
         print(f"\nHTML e screenshots gravados em {pasta.resolve()}")
 
     async def fechar(self) -> None:
