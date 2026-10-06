@@ -17,18 +17,15 @@ def _placar(p: Placar) -> str:
 def formatar(ev: Evento, link: str = "") -> str:
     j = ev.jogo
     if ev.tipo == "ENTRADA":
-        a = ev.analise
-        padrao = "".join(EMOJI[c] for c in a.padrao)
         texto = (
             f"🚨 <b>ENTRADA CONFIRMADA — {j.nome}</b>\n\n"
             f"🎯 Apostar: <b>{j.rotulo(ev.cor)}</b>\n"
             f"🛡️ Proteger: <b>{j.rotulo(j.protecao)}</b>\n"
             f"🔁 Até 2 gales\n\n"
-            f"📊 Padrão {padrao} → {a.taxa:.0%} em {a.amostras} casos "
-            f"(sem gale {a.taxa_sem_gale:.0%})"
+            f"📊 Assertividade: <b>{ev.analise.taxa:.0%}</b>"
         )
         if link:
-            texto += f'\n\n🎰 <a href="{link}">Abrir mesa</a>'
+            texto += f"\n\n🎰 Jogar aqui: {link}"
         return texto
     if ev.tipo == "GALE":
         return (

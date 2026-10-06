@@ -57,6 +57,7 @@ def config_estrategia() -> ConfigEstrategia:
         tamanhos_padrao=tuple(int(x) for x in env("PADRAO_TAMANHOS", "3,4,5").split(",")),
         min_amostras=int(env("MIN_AMOSTRAS", "20")),
         taxa_minima=float(env("TAXA_MINIMA", "0.88")),
+        taxa_maxima=float(env("TAXA_MAXIMA", "0.98")),
         max_gales=int(env("MAX_GALES", "2")),
     )
 

@@ -26,6 +26,7 @@ class ConfigEstrategia:
     tamanhos_padrao: tuple[int, ...] = (3, 4, 5)
     min_amostras: int = 20
     taxa_minima: float = 0.88
+    taxa_maxima: float = 0.98
     max_gales: int = 2
     historico_maximo: int = 2000
 
@@ -66,9 +67,9 @@ def analisar(historico: list[Cor], jogo: Jogo, cfg: ConfigEstrategia) -> Analise
             if total < cfg.min_amostras:
                 continue
             a = Analise(cor, padrao, total, ganhos / total, ganhos_g0 / total)
+            if not cfg.taxa_minima <= a.taxa <= cfg.taxa_maxima:
+                continue
             chave = (a.taxa, a.taxa_sem_gale, a.amostras)
             if melhor is None or chave > (melhor.taxa, melhor.taxa_sem_gale, melhor.amostras):
                 melhor = a
-    if melhor is None or melhor.taxa < cfg.taxa_minima:
-        return None
     return melhor

@@ -79,7 +79,7 @@ def test_pausa_apos_red():
 def test_analise_encontra_padrao():
     # Depois de V,V vem sempre A neste histórico.
     hist = [V, V, A, A] * 15 + [V, V]
-    a = analisar(hist, FS, ConfigEstrategia(tamanhos_padrao=(2,), min_amostras=5, taxa_minima=0.9))
+    a = analisar(hist, FS, ConfigEstrategia(tamanhos_padrao=(2,), min_amostras=5, taxa_minima=0.9, taxa_maxima=1.0))
     assert a is not None and a.cor == A and a.taxa_sem_gale == 1.0
 
 
@@ -109,3 +109,18 @@ def test_mensagens():
     for r in (A, A, V):
         for ev in g.novo_resultado(r):
             assert formatar(ev)
+
+
+def test_analise_respeita_taxa_maxima():
+    hist = [V, V, A, A] * 15 + [V, V]  # padrão com 100%
+    cfg = ConfigEstrategia(tamanhos_padrao=(2,), min_amostras=5, taxa_minima=0.88, taxa_maxima=0.98)
+    assert analisar(hist, FS, cfg) is None
+
+
+def test_mensagem_entrada():
+    from robos.estrategia import Analise
+    from robos.sinais import Evento
+    ev = Evento("ENTRADA", FS, A, analise=Analise(A, (V, V), 50, 0.912, 0.5))
+    texto = formatar(ev, "https://betnjet.click/WFcUQ")
+    assert "🔵 VISITANTE" in texto and "🟡 EMPATE" in texto
+    assert "Assertividade: <b>91%</b>" in texto and "https://betnjet.click/WFcUQ" in texto

@@ -34,7 +34,8 @@ export PLAYWRIGHT_BROWSERS_PATH="$PASTA/.browsers"
 [ -f "$PASTA/.env" ] || cp "$PASTA/.env.example" "$PASTA/.env"
 # Valores passados no comando de instalação vão diretamente para o .env.
 for VAR in TELEGRAM_TOKEN_FS TELEGRAM_CHAT_FS TELEGRAM_TOKEN_LR TELEGRAM_CHAT_LR \
-           ATIVAR_FOOTBALL_STUDIO ATIVAR_LIGHTNING_ROULETTE FONTE TIPMINER_EMAIL TIPMINER_SENHA; do
+           ATIVAR_FOOTBALL_STUDIO ATIVAR_LIGHTNING_ROULETTE FONTE TIPMINER_EMAIL TIPMINER_SENHA \
+           LINK_MESA_FS LINK_MESA_LR; do
   if [ -n "${!VAR:-}" ]; then
     VALOR=$(printf '%s' "${!VAR}" | sed 's/[&|\\]/\\&/g')
     sed -i "s|^$VAR=.*|$VAR=$VALOR|" "$PASTA/.env"

@@ -15,7 +15,7 @@ mostra o placar (SG/G1/G2/proteção), a taxa e o saldo em unidades.
 A cada resultado, pega nas últimas 3, 4 e 5 cores e procura todas as vezes que esse
 padrão apareceu no histórico (até 2000 rondas). Para cada cor simula o ciclo completo
 com gales e proteção, e só envia se o melhor padrão tiver pelo menos `MIN_AMOSTRAS`
-casos e taxa ≥ `TAXA_MINIMA`. Depois de um red faz uma pausa de `PAUSA_APOS_RED` rondas.
+casos e taxa entre `TAXA_MINIMA` e `TAXA_MAXIMA`. Depois de um red faz uma pausa de `PAUSA_APOS_RED` rondas.
 Tudo é configurável no `.env`.
 
 ## Instalação
