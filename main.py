@@ -2,6 +2,7 @@
 
     python main.py                 # corre os dois robôs
     python main.py --diagnostico   # testa o login/seletores do tipminer
+    python main.py --diagnostico-casino fs   # grava as mensagens da mesa no casino (fs|lr)
 """
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from robos.estrategia import ConfigEstrategia
+from robos.fontes import casino
 from robos.fontes.simulador import FonteSimulador
 from robos.fontes.tipminer import ConfigTipminer, FonteTipminer
 from robos.jogos import JOGOS, Jogo
@@ -100,9 +102,28 @@ async def principal(diagnostico: bool) -> None:
         await fonte.fechar()
 
 
+def diagnostico_casino(jogo: str, segundos: int) -> None:
+    cfg = casino.ConfigCasino(
+        email=env("CASINO_EMAIL"),
+        senha=env("CASINO_SENHA"),
+        url_login=env("CASINO_URL_LOGIN"),
+        urls={"fs": env("CASINO_URL_FS", "-"), "lr": env("CASINO_URL_LR", "-")},
+        headless=env("CASINO_HEADLESS", "true").lower() == "true",
+    )
+    if cfg.urls[jogo] == "-":
+        raise SystemExit(f"Falta CASINO_URL_{jogo.upper()} no .env")
+    asyncio.run(casino.diagnostico(cfg, jogo, segundos))
+
+
 if __name__ == "__main__":
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     parser = argparse.ArgumentParser()
     parser.add_argument("--diagnostico", action="store_true")
-    asyncio.run(principal(parser.parse_args().diagnostico))
+    parser.add_argument("--diagnostico-casino", choices=["fs", "lr"])
+    parser.add_argument("--segundos", type=int, default=180)
+    args = parser.parse_args()
+    if args.diagnostico_casino:
+        diagnostico_casino(args.diagnostico_casino, args.segundos)
+    else:
+        asyncio.run(principal(args.diagnostico))
