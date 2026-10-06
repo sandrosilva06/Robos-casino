@@ -9,8 +9,7 @@ def _placar(p: Placar) -> str:
     g = p.greens
     return (
         f"📈 <b>Placar:</b> {p.total_greens} ✅ | {p.reds} ❌ — {p.taxa:.1%}\n"
-        f"SG {g['G0']} · G1 {g['G1']} · G2 {g['G2']} · Proteção {g['PROTECAO']}\n"
-        f"💰 Saldo: {p.saldo:+.2f} un."
+        f"SG {g['G0']} · G1 {g['G1']} · G2 {g['G2']} · Proteção {g['PROTECAO']}"
     )
 
 
@@ -36,9 +35,9 @@ def formatar(ev: Evento, link: str = "") -> str:
         etapa = "PROTEÇÃO" if ev.resultado == j.protecao else ("SEM GALE" if ev.gale == 0 else f"GALE {ev.gale}")
         return (
             f"✅✅ <b>GREEN — {etapa}</b> {EMOJI[ev.resultado]}\n"
-            f"Ciclo: {ev.lucro_ciclo:+.2f} un.\n\n{_placar(ev.placar)}"
+            f"\n{_placar(ev.placar)}"
         )
     return (
         f"❌ <b>RED</b> — saiu {EMOJI[ev.resultado]}\n"
-        f"Ciclo: {ev.lucro_ciclo:+.2f} un.\n\n{_placar(ev.placar)}"
+        f"\n{_placar(ev.placar)}"
     )
