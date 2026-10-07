@@ -3,6 +3,7 @@
     python main.py                 # corre os dois robôs
     python main.py --diagnostico   # testa o login/seletores do tipminer
     python main.py --diagnostico-casino fs   # grava as mensagens da mesa no casino (fs|lr)
+    python main.py --diagnostico-site URL    # analisa uma página pública de histórico
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from robos.estrategia import ConfigEstrategia
-from robos.fontes import casino
+from robos.fontes import casino, diagnostico_site
 from robos.fontes.simulador import FonteSimulador
 from robos.fontes.tipminer import ConfigTipminer, FonteTipminer
 from robos.jogos import JOGOS, Jogo
@@ -121,9 +122,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--diagnostico", action="store_true")
     parser.add_argument("--diagnostico-casino", choices=["fs", "lr"])
+    parser.add_argument("--diagnostico-site", metavar="URL")
     parser.add_argument("--segundos", type=int, default=180)
     args = parser.parse_args()
-    if args.diagnostico_casino:
+    if args.diagnostico_site:
+        asyncio.run(diagnostico_site.diagnostico(args.diagnostico_site, args.segundos))
+    elif args.diagnostico_casino:
         diagnostico_casino(args.diagnostico_casino, args.segundos)
     else:
         asyncio.run(principal(args.diagnostico))
